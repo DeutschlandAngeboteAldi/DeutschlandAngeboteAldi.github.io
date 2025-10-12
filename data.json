@@ -1,0 +1,27 @@
+[
+{
+  "price": 1.79,
+  "kg-preis": 17.90,
+  "name": "Salame Cremona oder Salamini Cacciatora",
+  "producer": "GOURMET FINEST CUISINE",
+  "description": "Salame Cremona g. g. A. oder Salamini Italiani alla Cacciatora g. U., je 100-g-Packung",
+  "shop":"aldi"
+},
+{
+  "price": 1.49,
+  "name": "Handgelegter Kochschinken",
+  "producer": "GOURMET FINEST CUISINE",
+  "description": "Verschiedene Sorten, je 125-g-Packung",
+  "kg-preis": 11.92,
+  "shop":"aldi"
+},
+{
+  "price": 2.39,
+  "name": "Bresaola della Valtellina",
+  "producer": "GOURMET FINEST CUISINE",
+  "description": "Luftgetrockneter Rinderrohschinken, je 80-g-Packung",
+  "kg-preis": 29.88,
+  "shop":"aldi"
+
+}
+]
