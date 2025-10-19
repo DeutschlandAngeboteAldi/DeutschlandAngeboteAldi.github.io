@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Lidl/Aldi/Rewe Discounts</title>
+    <title>Aldi/Rewe/Edeka/Penny/Lidl Discounts</title>
     <style>
         table {
             border-collapse: collapse;
@@ -36,9 +36,10 @@
             Shop:
             <select id="filterShop">
                 <option value="">All</option>
-                <option value="aldi">Aldi</option>
-                <option value="lidl">Lidl</option>
-                <option value="rewe">Rewe</option>
+                <option value="aldi">aldi</option>
+                <option value="edeka">edeka</option>
+                <option value="penny">penny</option>
+                <option value="rewe">rewe</option>
             </select>
         </label>
         <label>
@@ -90,22 +91,24 @@
 
             if (!Array.isArray(data) || data.length === 0) return;
 
-            // Exclude 'producer' column
-            const headers = Object.keys(data[0]).filter(h => h !== 'producer');
+            // Define the headers we want to display
+            const headers = ['price', 'discount-percent', 'name', 'description', 'shop'];
             headers.forEach(h => {
                 const th = document.createElement('th');
-                th.textContent = h.charAt(0).toUpperCase() + h.slice(1);
+                th.textContent = h.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
                 headerRow.appendChild(th);
             });
 
             // Create table rows
             data.forEach(row => {
                 const tr = document.createElement('tr');
-                headers.forEach(h => {
-                    const td = document.createElement('td');
-                    td.textContent = row[h];
-                    tr.appendChild(td);
-                });
+                tr.innerHTML = `
+                    <td>${row.price}</td>
+                    <td>${row.discount ? row.discount + '%' : ''}</td>
+                    <td>${row.name}</td>
+                    <td>${row.description}</td>
+                    <td>${row.shop}</td>
+                `;
                 tbody.appendChild(tr);
             });
         }
@@ -119,13 +122,23 @@
             const priceMin = parseFloat(document.getElementById('filterPriceMin').value);
             const priceMax = parseFloat(document.getElementById('filterPriceMax').value);
 
+            // If all filters are empty, or only the shop filter is selected, show no data.
+            const otherFiltersActive = name || desc || !isNaN(priceMin) || !isNaN(priceMax);
+            if (!otherFiltersActive) {
+                renderTable([]);
+                return;
+            }
+
+            if ((name.length > 0 && name.length < 3) || (desc.length > 0 && desc.length < 3)) {
+                renderTable([]);
+                return;
+            }
+
             filtered = filtered.filter(row => {
                 // Shop filter
                 if (shop && String(row.shop).toLowerCase() !== shop) return false;
-                // Name fuzzy filter
-                if (name && !fuzzyMatch(name, String(row.name))) return false;
-                // Description fuzzy filter
-                if (desc && !fuzzyMatch(desc, String(row.description))) return false;
+                if (name.length >= 3 && !fuzzyMatch(name, String(row.name))) return false;
+                if (desc.length >= 3 && !fuzzyMatch(desc, String(row.description))) return false;
                 // Price min filter
                 if (!isNaN(priceMin) && parseFloat(row.price) < priceMin) return false;
                 // Price max filter
@@ -133,21 +146,36 @@
                 return true;
             });
 
-            renderTable(filtered);
+            renderTable(filtered.slice(0, 20));
         }
 
-        fetch('data.json')
-            .then(response => response.json())
-            .then(data => {
+        fetch('http://deutschland-angebote-aldi-lidl-rewe-penny-netto-edeka.s3-website.eu-central-1.amazonaws.com/output.csv') // data.csv
+            .then(response => response.text())
+            .then(text => {
+                const lines = text.trim().split('\n');
+                const data = lines.map(line => {
+                    if (!line) return null;
+                    const [discount, price, name, description, shop] = line.split('⥌');
+                    return {
+                        price: parseFloat(price),
+                        discount: discount ? parseInt(discount, 10) : null,
+                        name: name,
+                        description: description,
+                        shop: shop
+                    };
+                }).filter(Boolean); // remove any null entries from empty lines
+
                 allData = data;
-                renderTable(allData);
+                applyFilters(); // Initially call filters to ensure table is empty
             })
             .catch(err => {
-                document.getElementById('discountTable').outerHTML = "<p style='color:red;text-align:center;'>Failed to load data.json</p>";
+                console.error('Error fetching or parsing data:', err);
+                document.getElementById('discountTable').outerHTML = "<p style='color:red;text-align:center;'>Failed to load data</p>";
             });
 
         // Add event listeners for filters
         document.addEventListener('DOMContentLoaded', () => {
+            renderTable([]); // Ensure table is empty on load
             ['filterShop', 'filterName', 'filterDescription', 'filterPriceMin', 'filterPriceMax'].forEach(id => {
                 document.getElementById(id).addEventListener('input', applyFilters);
             });
