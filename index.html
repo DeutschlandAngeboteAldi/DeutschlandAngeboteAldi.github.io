@@ -21,43 +21,55 @@
             width: 80%;
             margin: 20px auto;
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-row {
+            display: flex;
             gap: 10px;
             justify-content: center;
+            width: 100%;
         }
         .filters input, .filters select {
             padding: 5px;
         }
+        #filterPriceMin, #filterPriceMax {
+            width: 8ch;
+        }
+        #filterDescription {
+            width: 70%;
+        }
+        .filters label {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body>
-    <h2 style="text-align:center;">Shop Discounts</h2>
+    <h2 id="pageTitle" style="text-align:center;">Shop discounts</h2>
     <div class="filters">
-        <label>
-            Shop:
-            <select id="filterShop">
-                <option value="">All</option>
-                <option value="aldi">aldi</option>
-                <option value="edeka">edeka</option>
-                <option value="penny">penny</option>
-                <option value="rewe">rewe</option>
-            </select>
-        </label>
-        <label>
-            Name:
-            <input type="text" id="filterName" placeholder="Name">
-        </label>
-        <label>
-            Description:
-            <input type="text" id="filterDescription" placeholder="Description">
-        </label>
-        <label>
-            Price Min:
-            <input type="number" id="filterPriceMin" min="0" step="0.01" placeholder="Min">
-        </label>
-        <label>
-            Price Max:
-            <input type="number" id="filterPriceMax" min="0" step="0.01" placeholder="Max">
-        </label>
+        <div class="filter-row">
+            <label>
+                Shop:
+                <select id="filterShop">
+                    <option value="">All</option>
+                    <option value="aldi">aldi</option>
+                    <option value="edeka">edeka</option>
+                    <option value="penny">penny</option>
+                    <option value="rewe">rewe</option>
+                </select>
+            </label>
+            <label>
+                Name:
+                <input type="text" id="filterName" placeholder="Name">
+            </label>
+        </div>
+        <div class="filter-row">
+            <label>Description: <input type="text" id="filterDescription" placeholder="Description"></label>
+            <label>Price Min: <input type="number" id="filterPriceMin" min="0" step="0.01" placeholder="Min"></label>
+            <label>Price Max: <input type="number" id="filterPriceMax" min="0" step="0.01" placeholder="Max"></label>
+        </div>
     </div>
     <table id="discountTable">
         <thead>
@@ -116,11 +128,18 @@
         function applyFilters() {
             let filtered = allData.slice();
 
-            const shop = document.getElementById('filterShop').value.trim().toLowerCase();
+            const shopSelect = document.getElementById('filterShop');
+            const shop = shopSelect.value.trim().toLowerCase();
             const name = document.getElementById('filterName').value.trim();
             const desc = document.getElementById('filterDescription').value.trim();
             const priceMin = parseFloat(document.getElementById('filterPriceMin').value);
             const priceMax = parseFloat(document.getElementById('filterPriceMax').value);
+
+            // Update page title
+            const pageTitle = document.getElementById('pageTitle');
+            const selectedOption = shopSelect.options[shopSelect.selectedIndex];
+            const shopName = selectedOption.text;
+            pageTitle.textContent = `${shopName} Discounts`;
 
             // If all filters are empty, or only the shop filter is selected, show no data.
             const otherFiltersActive = name || desc || !isNaN(priceMin) || !isNaN(priceMax);
@@ -175,6 +194,7 @@
 
         // Add event listeners for filters
         document.addEventListener('DOMContentLoaded', () => {
+            applyFilters(); // Set initial title
             renderTable([]); // Ensure table is empty on load
             ['filterShop', 'filterName', 'filterDescription', 'filterPriceMin', 'filterPriceMax'].forEach(id => {
                 document.getElementById(id).addEventListener('input', applyFilters);
