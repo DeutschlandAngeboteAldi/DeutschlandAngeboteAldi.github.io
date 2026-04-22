@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <title>Aldi/Rewe/Edeka/Penny/Lidl Discounts</title>
     <style>
+        body {
+            --bg-color: var(--tg-theme-bg-color);
+            font: 12px/18px "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--tg-theme-text-color);
+            margin: 48px 24px;
+            padding: 0;
+            color-scheme: var(--tg-color-scheme);
+        }
         table {
             border-collapse: collapse;
             width: 80%;
@@ -14,50 +23,86 @@
             padding: 8px 12px;
             text-align: left;
         }
-        th {
-            background: #f0f0f0;
+        :root {
+        /* Default for light scheme or fallback */
+            --th-background: #f0f0f0;
         }
+
+        /* Select the root element when the Telegram client has injected the dark scheme variable */
+        :root[style*="--tg-color-scheme: dark"] {
+            --th-background: #3a3a3a;
+        }
+        th {
+            background: var(--th-background);
+        }        
         .filters {
             width: 80%;
             margin: 20px auto;
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        .filter-row {
+            display: flex;
             gap: 10px;
             justify-content: center;
+            width: 100%;
         }
         .filters input, .filters select {
             padding: 5px;
         }
+        #filterPriceMin, #filterPriceMax {
+            width: 8ch;
+        }
+        #filterDescription {
+            width: 70%;
+        }
+        .filters label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* new: ensure checkboxes are centered in their flex parents */
+        .filters .filter-row input[type="checkbox"] {
+            align-self: center;    /* center inside a flex container */
+            margin-left: 6px;
+            vertical-align: middle; /* fallback for non-flex contexts */
+        }
     </style>
 </head>
 <body>
-    <h2 style="text-align:center;">Shop Discounts</h2>
+    <h2 id="pageTitle" style="text-align:center;">Shop discounts</h2>
     <div class="filters">
-        <label>
-            Shop:
-            <select id="filterShop">
-                <option value="">All</option>
-                <option value="aldi">aldi</option>
-                <option value="edeka">edeka</option>
-                <option value="penny">penny</option>
-                <option value="rewe">rewe</option>
-            </select>
-        </label>
-        <label>
-            Name:
-            <input type="text" id="filterName" placeholder="Name">
-        </label>
-        <label>
-            Description:
-            <input type="text" id="filterDescription" placeholder="Description">
-        </label>
-        <label>
-            Price Min:
-            <input type="number" id="filterPriceMin" min="0" step="0.01" placeholder="Min">
-        </label>
-        <label>
-            Price Max:
-            <input type="number" id="filterPriceMax" min="0" step="0.01" placeholder="Max">
-        </label>
+        <div class="filter-row">
+            <label style="display:flex;align-items:center;gap:8px;">
+                Shop:
+                <select id="filterShop">
+                    <option value="">All</option>
+                    <option value="aldi">aldi</option>
+                    <option value="edeka">edeka</option>
+                    <option value="penny">penny</option>
+                    <option value="rewe">rewe</option>
+                </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;">
+                Name:
+                <input type="text" id="filterName" placeholder="Name">
+                <label style="display:inline-flex;align-items:center;gap:6px;margin-left:6px;" >
+                </label>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;">
+                Fuzzy:
+                <input style="display:inline-flex;align-items:center;gap:6px;margin-left:6px;" type="checkbox" id="filterFuzzy">
+            </label>
+
+            
+        </div>
+        <div class="filter-row">
+            <label>Description: <input type="text" id="filterDescription" placeholder="Description"></label>
+            <label>Price Min: <input type="number" id="filterPriceMin" min="0" step="0.01" placeholder="Min"></label>
+            <label>Price Max: <input type="number" id="filterPriceMax" min="0" step="0.01" placeholder="Max"></label>
+        </div>
     </div>
     <table id="discountTable">
         <thead>
@@ -116,11 +161,19 @@
         function applyFilters() {
             let filtered = allData.slice();
 
-            const shop = document.getElementById('filterShop').value.trim().toLowerCase();
+            const shopSelect = document.getElementById('filterShop');
+            const shop = shopSelect.value.trim().toLowerCase();
             const name = document.getElementById('filterName').value.trim();
             const desc = document.getElementById('filterDescription').value.trim();
             const priceMin = parseFloat(document.getElementById('filterPriceMin').value);
             const priceMax = parseFloat(document.getElementById('filterPriceMax').value);
+            const fuzzy = document.getElementById('filterFuzzy') ? document.getElementById('filterFuzzy').checked : true;
+
+            // Update page title
+            const pageTitle = document.getElementById('pageTitle');
+            const selectedOption = shopSelect.options[shopSelect.selectedIndex];
+            const shopName = selectedOption.text;
+            pageTitle.textContent = `${shopName} Discounts`;
 
             // If all filters are empty, or only the shop filter is selected, show no data.
             const otherFiltersActive = name || desc || !isNaN(priceMin) || !isNaN(priceMax);
@@ -137,7 +190,13 @@
             filtered = filtered.filter(row => {
                 // Shop filter
                 if (shop && String(row.shop).toLowerCase() !== shop) return false;
-                if (name.length >= 3 && !fuzzyMatch(name, String(row.name))) return false;
+                if (name.length >= 3) {
+                    if (fuzzy) {
+                        if (!fuzzyMatch(name, String(row.name))) return false;
+                    } else {
+                        if (String(row.name).toLowerCase().indexOf(name.toLowerCase()) === -1) return false;
+                    }
+                }
                 if (desc.length >= 3 && !fuzzyMatch(desc, String(row.description))) return false;
                 // Price min filter
                 if (!isNaN(priceMin) && parseFloat(row.price) < priceMin) return false;
@@ -175,11 +234,25 @@
 
         // Add event listeners for filters
         document.addEventListener('DOMContentLoaded', () => {
+            applyFilters(); // Set initial title
             renderTable([]); // Ensure table is empty on load
-            ['filterShop', 'filterName', 'filterDescription', 'filterPriceMin', 'filterPriceMax'].forEach(id => {
+            ['filterShop', 'filterName', 'filterDescription', 'filterPriceMin', 'filterPriceMax', 'filterFuzzy'].forEach(id => {
                 document.getElementById(id).addEventListener('input', applyFilters);
             });
         });
     </script>
+
+ <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Init TWA
+        Telegram.WebApp.ready();
+
+        // Event occurs whenever theme settings are changed in the user's Telegram app (including switching to night mode).
+        Telegram.WebApp.onEvent('themeChanged', function() {
+            document.documentElement.className = Telegram.WebApp.colorScheme;
+        });
+            
+    </script>
+    
 </body>
 </html>
